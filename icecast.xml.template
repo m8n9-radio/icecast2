@@ -35,6 +35,7 @@
     <!-- Paths Configuration -->
     <paths>
         <webroot>$WEBROOT</webroot>
+        <adminroot>$ADMINROOT</adminroot>
         <logdir>$LOGDIR</logdir>
     </paths>
 
@@ -57,7 +58,6 @@
         <genre>$MOUNT_GENRE</genre>
         <bitrate>$MOUNT_BITRATE</bitrate>
         <public>$MOUNT_PUBLIC</public>
-        <max-listeners>$MOUNT_MAXLISTENERS</max-listeners>
         <fallback>$MOUNT_FALLBACK</fallback>
     </mount>
 

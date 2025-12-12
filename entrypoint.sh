@@ -35,6 +35,7 @@ export ADMIN_EMAIL=${ADMIN_EMAIL:-admin@localhost}
 
 # Webroot
 export WEBROOT=${WEBROOT:-/usr/share/icecast2/web}
+export ADMINROOT=${ADMINROOT:-/usr/share/icecast2/admin}
 
 # Mount defaults
 export MOUNT_NAME=${MOUNT_NAME:-/stream}
