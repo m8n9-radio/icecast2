@@ -1,0 +1,8 @@
+# env
+.env*
+!.env.dist
+!.env.example
+
+# misc
+.DS_Store
+*.pem
