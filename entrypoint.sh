@@ -13,6 +13,7 @@ export SOURCE_TIMEOUT=${SOURCE_TIMEOUT:-10}
 export BURST_ON_CONNECT=${BURST_ON_CONNECT:-1}
 export BURST_SIZE=${BURST_SIZE:-65536}
 
+
 # Authentication
 export SOURCE_PASSWORD=${SOURCE_PASSWORD:-hackme}
 export RELAY_PASSWORD=${RELAY_PASSWORD:-hackme}
@@ -66,16 +67,33 @@ export MASTER_PORT=${MASTER_PORT:-8000}
 export MASTER_MOUNT=${MASTER_MOUNT:-}
 export MASTER_RELAY_AUTH=${MASTER_RELAY_AUTH:-false}
 
+# Generate Icecast configuration
 envsubst < /app/icecast.xml.template > /etc/icecast2/icecast.xml
 
+# Generate Nginx configuration with MOUNT_NAME variable
+envsubst '${MOUNT_NAME}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+
+# Set timezone
 ln -snf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
 echo $TIMEZONE > /etc/timezone
 
-chown -R icecast2 /etc/icecast2 /var/log/icecast2 /var/run/icecast2 2>/dev/null || true
+# Create required directories and set permissions
+mkdir -p /var/log/supervisor /var/run/supervisor /var/log/icecast2 /var/run/icecast2
 
-echo "Icecast2 configuration generated from environment variables"
+# Create log files with correct ownership BEFORE supervisord starts
+touch /var/log/icecast2/access.log /var/log/icecast2/error.log
+chown -R icecast2:icecast /etc/icecast2 /var/log/icecast2 /var/run/icecast2 2>/dev/null || true
+chown -R www-data:www-data /var/cache/nginx /var/log/nginx 2>/dev/null || true
+chmod 755 /var/log/icecast2 /var/run/icecast2
+chmod 644 /var/log/icecast2/*.log
+
+echo "========================================"
+echo "Icecast2 + Nginx Proxy Configuration"
+echo "========================================"
 echo "Timezone: $TIMEZONE"
-echo "Listen port: $LISTEN_PORT"
+echo "Icecast port (internal): $LISTEN_PORT"
+echo "Nginx port (external): 80"
 echo "Max clients: $CLIENTS"
+echo "========================================"
 
-exec su -s /bin/bash icecast2 -c "icecast2 -c /etc/icecast2/icecast.xml"
+exec "$@"

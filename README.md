@@ -15,6 +15,103 @@ Acest serviciu oferă un server Icecast2 complet configurabil pentru streaming a
 - ✅ Optimizat pentru performanță
 - ✅ Fără warning-uri la pornire
 - ✅ Suport MIME types complet
+- ✅ **Nginx reverse proxy integrat** cu optimizări pentru streaming
+- ✅ **CORS headers** configurate pentru web players
+- ✅ **Caching inteligent** - cache pentru assets statice, fără cache pentru streaming
+- ✅ **Long-lived connections** pentru streaming continuu
+- ✅ **Zero buffering** pe stream-uri pentru latență minimă
+
+## Arhitectură
+
+Imaginea Docker conține 2 servicii care rulează împreună prin **supervisord**:
+
+1. **Icecast2** (port intern 8000) - server de streaming audio
+2. **Nginx** (port extern 80) - reverse proxy optimizat pentru streaming
+
+```
+Client → Nginx :80 → Icecast :8000
+```
+
+### Avantaje Nginx Proxy
+
+- **Performanță**: Nginx gestionează eficient conexiunile simultane
+- **Caching**: Assets statice (web interface) sunt cached, stream-urile NU
+- **CORS**: Headers configurate pentru web players din orice domeniu
+- **Zero Buffering**: Stream-urile sunt proxied fără buffering pentru latență minimă
+- **Long Timeouts**: Conexiuni de până la 1h pentru streaming continuu
+- **Security Headers**: X-Frame-Options, X-Content-Type-Options, etc.
+
+## Integrare cu Traefik
+
+Containerul Icecast este configurat cu labels Traefik pentru reverse proxy automat pe `m8n9.local`.
+
+### Configurație Implicită
+
+Stream-ul va fi accesibil la: `http://m8n9.local/stream` (sau orice ai setat în `MOUNT_NAME`)
+
+```
+Client → Traefik (m8n9.local:80) → Nginx :80 → Icecast :8000
+                                      ↓
+                              Stream: /stream (MOUNT_NAME)
+```
+
+### Endpoints Accesibile prin Traefik
+
+| Endpoint | URL | Descriere |
+|----------|-----|-----------|
+| **Stream Audio** | `http://m8n9.local${MOUNT_NAME}` | Stream principal (ex: `/stream`) |
+| Web Interface | `http://m8n9.local/` | Pagina principală |
+| Status | `http://m8n9.local/status.xsl` | Status page |
+| Admin | `http://m8n9.local/admin/` | Admin interface |
+
+### Optimizări Traefik pentru Streaming
+
+Labels configurate în `docker-compose.yml`:
+
+```yaml
+labels:
+  - "traefik.enable=true"
+  - "traefik.http.routers.icecast.rule=Host(`m8n9.local`)"
+
+  # Streaming optimization - flush responses immediately
+  - "traefik.http.services.icecast.loadbalancer.responseforwarding.flushinterval=1ms"
+
+  # Preserve client headers
+  - "traefik.http.services.icecast.loadbalancer.passhostheader=true"
+```
+
+### Expunere DOAR a Stream-ului (Opțional)
+
+Dacă vrei să expui **doar** stream-ul audio și să blochezi accesul la admin/status, modifică label-ul de routing:
+
+```yaml
+# În docker-compose.yml, schimbă:
+- "traefik.http.routers.icecast.rule=Host(`m8n9.local`) && PathPrefix(`${MOUNT_NAME}`)"
+
+# Exemplu cu MOUNT_NAME=/stream:
+- "traefik.http.routers.icecast.rule=Host(`m8n9.local`) && PathPrefix(`/stream`)"
+```
+
+**Notă**: Valorile din `${MOUNT_NAME}` sunt citite din fișierul `.env`.
+
+### Configurare Hostname Custom
+
+Pentru a schimba hostname-ul de la `m8n9.local` la altceva:
+
+1. Editează `docker-compose.yml`:
+   ```yaml
+   - "traefik.http.routers.icecast.rule=Host(`radio.example.com`)"
+   ```
+
+2. SAU folosește variabilă de mediu:
+   ```yaml
+   - "traefik.http.routers.icecast.rule=Host(`${ICECAST_DOMAIN:-m8n9.local}`)"
+   ```
+
+3. Setează în `.env`:
+   ```env
+   ICECAST_DOMAIN=radio.example.com
+   ```
 
 ## Instalare și Utilizare
 
@@ -28,7 +125,7 @@ docker build -t icecast2 .
 
 ```bash
 docker run -d \
-  -p 8000:8000 \
+  -p 8000:80 \
   -e HOSTNAME=radio.example.com \
   -e LOCATION="Bucharest, Romania" \
   -e ADMIN_EMAIL=admin@example.com \
@@ -38,6 +135,8 @@ docker run -d \
   icecast2
 ```
 
+**Notă**: Portul expus este **80** (nginx), NU 8000. Icecast ascultă intern pe 8000.
+
 ### Docker Compose
 
 ```yaml
@@ -46,7 +145,7 @@ services:
     build:
       context: .
     ports:
-      - "8000:8000"
+      - "8000:80"  # Nginx pe 80, expus ca 8000 extern
     environment:
       - HOSTNAME=radio.example.com
       - LOCATION=Bucharest, Romania
@@ -413,6 +512,61 @@ HEADER_TIMEOUT=30
 SOURCE_TIMEOUT=30
 ```
 
+## Nginx Proxy - Detalii Tehnice
+
+### Headers pentru Streaming
+
+Nginx este configurat cu headers esențiale pentru compatibilitate Icecast/Shoutcast:
+
+- **CORS Headers**: `Access-Control-Allow-Origin: *` pentru web players
+- **Icy Headers**: `Icy-MetaInt`, `Icy-Name`, `Icy-Genre`, `Icy-Br`, `Icy-Url` pentru metadata
+- **Range Requests**: Suport pentru seek în stream-uri
+- **Security Headers**: `X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`
+
+### Strategii de Caching
+
+| Tip de conținut | Caching | Durată | Motiv |
+|-----------------|---------|--------|-------|
+| **Stream-uri** (`/stream`, `/live`, etc.) | ❌ NU | - | Real-time, fără latență |
+| **Assets statice** (`.css`, `.js`, `.png`) | ✅ DA | 60 min | Performanță |
+| **Status pages** (`/status.xsl`) | ✅ DA | 5 sec | Update rapid |
+| **Admin interface** (`/admin/`) | ❌ NU | - | Date sensibile |
+| **Home page** (`/`) | ✅ DA | 30 sec | Balance |
+
+### Buffering Configuration
+
+Pentru stream-uri audio:
+```nginx
+proxy_buffering off;              # Zero buffering
+proxy_request_buffering off;      # No request buffering
+proxy_max_temp_file_size 0;       # No temp files
+```
+
+Pentru assets statice:
+```nginx
+proxy_buffering on;               # Enable buffering
+proxy_cache icecast_cache;        # Use cache zone
+```
+
+### Timeouts
+
+| Parametru | Stream-uri | Admin | Statice |
+|-----------|------------|-------|---------|
+| `proxy_connect_timeout` | 3600s | 60s | 60s |
+| `proxy_send_timeout` | 3600s | 60s | 60s |
+| `proxy_read_timeout` | 3600s | 60s | 60s |
+
+Stream-urile au timeout de **1 oră** pentru conexiuni long-lived.
+
+### Health Check
+
+Nginx expune endpoint de health check:
+
+```bash
+curl http://localhost:80/nginx-health
+# Output: healthy
+```
+
 ## Securitate
 
 ### Best Practices
@@ -425,25 +579,35 @@ SOURCE_TIMEOUT=30
    ```
 
 2. **Limitează accesul la admin**:
-   - Folosește reverse proxy (nginx/traefik)
-   - Restricționează IP-uri pentru `/admin`
-
-3. **Folosește HTTPS** (prin reverse proxy):
+   - Nginx proxy este deja integrat
+   - Pentru restricții IP, adaugă în `nginx.conf.template`:
    ```nginx
-   server {
-       listen 443 ssl;
-       server_name radio.example.com;
-
-       location / {
-           proxy_pass http://localhost:8000;
-           proxy_set_header Host $host;
-       }
+   location /admin/ {
+       allow 10.0.0.0/8;
+       deny all;
+       proxy_pass http://icecast_backend;
    }
    ```
 
-4. **Actualizează regulat** imaginea Docker
+3. **Folosește HTTPS** (adaugă SSL termination la nginx):
+   - Montează certificate în container
+   - Modifică `nginx.conf.template` să adauge:
+   ```nginx
+   listen 443 ssl;
+   ssl_certificate /path/to/cert.pem;
+   ssl_certificate_key /path/to/key.pem;
+   ```
 
-5. **Monitorizează logs** pentru activități suspecte
+4. **Rate limiting** (previne abuse):
+   - Nginx are deja configurare optimizată
+   - Pentru rate limiting explicit, adaugă:
+   ```nginx
+   limit_req_zone $binary_remote_addr zone=streaming:10m rate=5r/s;
+   ```
+
+5. **Actualizează regulat** imaginea Docker
+
+6. **Monitorizează logs** pentru activități suspecte
 
 ## Dezvoltare
 
@@ -451,9 +615,11 @@ SOURCE_TIMEOUT=30
 
 ```
 01-icecast/
-├── Dockerfile              # Configurare Docker
+├── Dockerfile              # Configurare Docker (Icecast + Nginx + Supervisor)
 ├── entrypoint.sh          # Script de inițializare
-├── icecast.xml.template   # Template configurare XML
+├── icecast.xml.template   # Template configurare Icecast
+├── nginx.conf.template    # Template configurare Nginx proxy
+├── supervisord.conf       # Configurare Supervisor pentru multi-proces
 ├── .env.dist              # Exemplu variabile de mediu
 ├── .gitignore            # Git ignore patterns
 ├── LICENSE               # Licență proiect
@@ -462,7 +628,7 @@ SOURCE_TIMEOUT=30
 
 ### Modificare Template
 
-Pentru a modifica configurarea XML:
+#### Modificare configurare Icecast
 
 1. Editează `icecast.xml.template`
 2. Adaugă variabile noi în `entrypoint.sh`
@@ -470,6 +636,37 @@ Pentru a modifica configurarea XML:
    ```bash
    docker build -t icecast2 .
    ```
+
+#### Modificare configurare Nginx
+
+1. Editează `nginx.conf.template`
+2. Poți adăuga:
+   - Rate limiting
+   - IP whitelisting pentru admin
+   - SSL/TLS configuration
+   - Custom headers
+   - Additional caching rules
+3. Rebuild image-ul:
+   ```bash
+   docker build -t icecast2 .
+   ```
+
+#### Exemplu: Adăugare SSL în Nginx
+
+```nginx
+server {
+    listen 80 default_server;
+    listen 443 ssl http2;
+    server_name _;
+
+    ssl_certificate /etc/ssl/certs/icecast.crt;
+    ssl_certificate_key /etc/ssl/private/icecast.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    # ... rest of config
+}
+```
 
 ### Testing
 
