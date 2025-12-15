@@ -486,29 +486,8 @@ ffmpeg -re -f lavfi -i "sine=frequency=1000:duration=10" \
   -f mp3 icecast://source:hackme@localhost:8000/test
 ```
 
-## Suport și Contribuții
-
-### Raportare Bug-uri
-
-Deschide un issue pe GitHub cu:
-- Versiunea Icecast
-- Configurația (fără parole)
-- Logs-urile relevante
-- Pașii de reproducere
-
-### Contribuții
-
-1. Fork repository-ul
-2. Creează feature branch
-3. Commit modificările
-4. Push și creează Pull Request
-
 ## Resurse
 
 - [Documentație oficială Icecast](https://icecast.org/docs/)
 - [Icecast GitHub](https://github.com/xiph/Icecast-Server)
 - [Xiph.org](https://xiph.org/)
-
-## Licență
-
-Acest proiect este licențiat sub termenii specificați în fișierul LICENSE.

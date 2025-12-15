@@ -59,6 +59,11 @@
         <bitrate>$MOUNT_BITRATE</bitrate>
         <public>$MOUNT_PUBLIC</public>
         <fallback>$MOUNT_FALLBACK</fallback>
+        <http-headers>
+            <header name="Access-Control-Allow-Origin" value="*" />
+            <header name="Access-Control-Allow-Headers" value="Origin, Accept, X-Requested-With, Content-Type, Icy-MetaData" />
+            <header name="Access-Control-Allow-Methods" value="GET, OPTIONS, HEAD" />
+        </http-headers>
     </mount>
 
     <!-- Master Relay Configuration (optional) -->
