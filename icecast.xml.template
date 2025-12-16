@@ -1,24 +1,18 @@
-<?xml version="1.0"?>
 <icecast>
-    <!-- Server Information -->
-    <hostname>$HOSTNAME</hostname>
     <location>$LOCATION</location>
     <admin>$ADMIN_EMAIL</admin>
+    <hostname>$HOSTNAME</hostname>
 
-    <!-- Limits and Tuning -->
     <limits>
         <clients>$CLIENTS</clients>
         <sources>$SOURCES</sources>
-        <threadpool>$THREADPOOL</threadpool>
         <queue-size>$QUEUE_SIZE</queue-size>
         <client-timeout>$CLIENT_TIMEOUT</client-timeout>
         <header-timeout>$HEADER_TIMEOUT</header-timeout>
         <source-timeout>$SOURCE_TIMEOUT</source-timeout>
-        <burst-on-connect>$BURST_ON_CONNECT</burst-on-connect>
         <burst-size>$BURST_SIZE</burst-size>
     </limits>
 
-    <!-- Security and Authentication -->
     <authentication>
         <source-password>$SOURCE_PASSWORD</source-password>
         <relay-password>$RELAY_PASSWORD</relay-password>
@@ -26,55 +20,39 @@
         <admin-password>$ADMIN_PASSWORD</admin-password>
     </authentication>
 
-    <!-- Listen Socket Configuration -->
     <listen-socket>
         <port>$LISTEN_PORT</port>
         <bind-address>$LISTEN_IP</bind-address>
     </listen-socket>
 
-    <!-- Paths Configuration -->
-    <paths>
-        <webroot>$WEBROOT</webroot>
-        <adminroot>$ADMINROOT</adminroot>
-        <logdir>$LOGDIR</logdir>
-    </paths>
+    <http-headers>
+        <header name="Access-Control-Allow-Origin" value="*" />
+        <header name="Access-Control-Allow-Headers" value="Origin, Accept, X-Requested-With, Content-Type, Icy-MetaData" />
+        <header name="Access-Control-Allow-Methods" value="GET, OPTIONS, HEAD" />
+    </http-headers>
 
-    <!-- Logging -->
-    <logging>
-        <loglevel>$LOGLEVEL</loglevel>
-        <logdir>$LOGDIR</logdir>
-        <accesslogdir>$ACCESSLOGDIR</accesslogdir>
-    </logging>
-
-    <!-- Statistics Configuration -->
-    <statistics>
-        <enabled>$STATS_ENABLED</enabled>
-    </statistics>
-
-    <!-- Mount Configuration -->
-    <mount>
+    <mount type="normal">
         <mount-name>$MOUNT_NAME</mount-name>
-        <description>$MOUNT_DESC</description>
-        <genre>$MOUNT_GENRE</genre>
-        <bitrate>$MOUNT_BITRATE</bitrate>
-        <public>$MOUNT_PUBLIC</public>
-        <fallback>$MOUNT_FALLBACK</fallback>
-        <http-headers>
-            <header name="Access-Control-Allow-Origin" value="*" />
-            <header name="Access-Control-Allow-Headers" value="Origin, Accept, X-Requested-With, Content-Type, Icy-MetaData" />
-            <header name="Access-Control-Allow-Methods" value="GET, OPTIONS, HEAD" />
-        </http-headers>
+        <charset>UTF-8</charset>
     </mount>
 
-    <!-- Master Relay Configuration (optional) -->
-    <!-- Uncomment and configure for relay setup
-    <relay>
-        <server>$MASTER_HOST</server>
-        <port>$MASTER_PORT</port>
-        <mount>$MASTER_MOUNT</mount>
-        <local-mount>$MOUNT_NAME</local-mount>
-        <relay-shoutcast>0</relay-shoutcast>
-    </relay>
-    -->
+    <fileserve>1</fileserve>
 
+    <paths>
+        <basedir>/usr/share/icecast</basedir>
+        <logdir>$LOGDIR</logdir>
+        <webroot>/usr/share/icecast/web</webroot>
+        <adminroot>/usr/share/icecast/admin</adminroot>
+        <alias source="/" destination="/status.xsl"/>
+    </paths>
+
+    <logging>
+        <accesslog>access.log</accesslog>
+        <errorlog>error.log</errorlog>
+        <loglevel>$LOGLEVEL</loglevel>
+    </logging>
+
+    <security>
+        <chroot>0</chroot>
+    </security>
 </icecast>
