@@ -1,0 +1,35 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Environment files (use build args or runtime env instead)
+.env*
+
+# Testing
+coverage
+.nyc_output
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# GitHub
+.github
+
+# IDEs
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
