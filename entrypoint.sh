@@ -40,11 +40,20 @@ export MOUNT_NAME=${MOUNT_NAME:-/stream}
 # Generate Icecast configuration
 envsubst < /app/icecast.xml.template > /app/icecast.xml
 
+# Generate nginx configuration from template
+envsubst '${MOUNT_NAME}' < /etc/nginx/conf.d/icecast.conf.template > /etc/nginx/conf.d/icecast.conf
+
+# Test nginx configuration
+nginx -t
+
 echo "========================================"
-echo "Icecast 2.4.4"
+echo "Icecast 2.4.4 + Nginx Proxy"
 echo "========================================"
-echo "Port: $LISTEN_PORT"
+echo "Icecast Port (internal): $LISTEN_PORT"
+echo "Nginx Port (external): 80"
 echo "Mount: $MOUNT_NAME"
+echo "Stream URL: http://<host>/"
+echo "Admin URL: http://<host>/admin"
 echo "========================================"
 
 exec "$@"

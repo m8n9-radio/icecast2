@@ -41,6 +41,8 @@ RUN apt-get update && apt-get install -y \
   libcurl4 \
   libogg0 \
   libssl3 \
+  nginx \
+  supervisor \
   && rm -rf /var/lib/apt/lists/*
 
 # Copy Icecast-KH from builder
@@ -48,19 +50,26 @@ COPY --from=builder /install/usr /usr
 
 # Create icecast user and directories
 RUN useradd -r -s /bin/false icecast && \
-  mkdir -p /var/log/icecast /app && \
+  mkdir -p /var/log/icecast /var/log/nginx /var/log/supervisor /app /etc/supervisor/conf.d && \
   chown -R icecast:icecast /var/log/icecast /app
 
 WORKDIR /app
 
-COPY --chown=icecast:icecast entrypoint.sh /entrypoint.sh
-COPY --chown=icecast:icecast icecast.xml.template .
+# Copy Icecast configuration
+COPY icecast.xml.template .
 
+# Copy nginx configurations
+COPY nginx/nginx.conf /etc/nginx/nginx.conf
+COPY nginx/conf.d/icecast.conf.template /etc/nginx/conf.d/icecast.conf.template
+
+# Copy supervisor configuration
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Copy main entrypoint
+COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-USER icecast
-
-EXPOSE 8000
+EXPOSE 80
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["icecast", "-c", "/app/icecast.xml"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
