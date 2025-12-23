@@ -28,7 +28,7 @@ export LOGDIR=${LOGDIR:-/var/log/icecast}
 
 # Server info
 export HOSTNAME=${HOSTNAME:-localhoxt}
-export LOCATION=${LOCATION:-Unknown`}
+export LOCATION=${LOCATION:-Unknown}
 export ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
 
 export WEBROOT=${WEBROOT:-/usr/share/icecast2/web}
@@ -38,15 +38,10 @@ export MOUNT_NAME=${MOUNT_NAME:-/stream}
 
 # Generate configs from templates
 envsubst < /etc/icecast/icecast.xml.template > /etc/icecast/icecast.xml
-envsubst '${MOUNT_NAME}' < /etc/nginx/conf.d/icecast.conf.template > /etc/nginx/conf.d/icecast.conf
-
-# Validate nginx config
-nginx -t
 
 echo "========================================"
 echo "   icecast: 0.0.0.0:$LISTEN_PORT"
-echo "     nginx: 0.0.0.0:80"
-echo " streaming: 0.0.0.0:80$MOUNT_NAME"
+echo " streaming: 0.0.0.0:$LISTEN_PORT$MOUNT_NAME"
 echo "========================================"
 
 exec "$@"

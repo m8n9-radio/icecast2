@@ -36,25 +36,21 @@ RUN apt-get update && apt-get install -y \
     libcurl4 \
     libogg0 \
     libssl3 \
-    nginx \
-    supervisor \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /install/usr /usr
 RUN useradd -r -s /bin/false icecast && \
-    mkdir -p /var/log/icecast /var/log/nginx /var/log/supervisor /etc/icecast /etc/supervisor/conf.d && \
-    chown -R icecast:icecast /var/log/icecast
+    mkdir -p /var/log/icecast /etc/icecast && \
+    chown -R icecast:icecast /var/log/icecast /etc/icecast
 WORKDIR /app
 
 # Copy config templates to standard locations
 COPY icecast/icecast.xml.template /etc/icecast/
-COPY nginx/nginx.conf /etc/nginx/
-COPY nginx/conf.d/icecast.conf.template /etc/nginx/conf.d/
-COPY supervisord/supervisord.conf /etc/supervisor/conf.d/
 
 # Copy entrypoint
 COPY entrypoint.sh /app/
 RUN chmod +x /app/entrypoint.sh
 
-EXPOSE 80
+EXPOSE 8000
+USER icecast
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["/usr/bin/icecast", "-c", "/etc/icecast/icecast.xml"]
