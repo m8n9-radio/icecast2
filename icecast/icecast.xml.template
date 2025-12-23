@@ -31,10 +31,13 @@
         <header name="Access-Control-Allow-Methods" value="GET, OPTIONS, HEAD" />
     </http-headers>
 
+    <!-- Mount configuration (optional - can be configured via source metadata) -->
+    <!--
     <mount type="normal">
         <mount-name>$MOUNT_NAME</mount-name>
         <charset>UTF-8</charset>
     </mount>
+    -->
 
     <fileserve>1</fileserve>
 

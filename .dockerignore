@@ -1,26 +1,17 @@
-# Git files
-.git
-.gitignore
-.gitattributes
-
-# Environment files (use build args or runtime env instead)
-.env*
-
-# Testing
-coverage
-.nyc_output
-
 # Git
-.git
+.git/
 .gitignore
 .gitattributes
+
+# Environment (keep .env.dist for reference)
+.env
 
 # GitHub
-.github
+.github/
 
 # IDEs
-.vscode
-.idea
+.vscode/
+.idea/
 *.swp
 *.swo
 *~
@@ -29,7 +20,13 @@ coverage
 .DS_Store
 Thumbs.db
 
-# Docker
+# Docker build files
 Dockerfile*
 docker-compose*.yml
 .dockerignore
+
+# Build artifacts
+coverage/
+.nyc_output/
+node_modules/
+*.log

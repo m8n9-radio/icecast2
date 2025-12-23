@@ -132,22 +132,109 @@ icy.update_metadata(
 
 ## Structură Fișiere
 
+### Repository Structure
 ```
 01-icecast/
-├── Dockerfile              # Multi-stage build pentru Icecast-KH
-├── entrypoint.sh          # Script de inițializare
-├── icecast.xml.template   # Template configurare
-├── .env                   # Variabile de mediu
-├── .env.dist              # Exemplu variabile
-└── README.md              # Documentație
+├── Dockerfile                          # Multi-stage build pentru Icecast-KH
+├── .dockerignore                       # Exclude files from Docker context
+├── entrypoint.sh                       # Script de inițializare și config generation
+├── .env                                # Variabile de mediu (local, nu in VCS)
+├── .env.dist                           # Template variabile de mediu
+├── icecast/
+│   └── icecast.xml.template           # Template configurare Icecast-KH
+├── nginx/
+│   ├── nginx.conf                     # Configurare principală Nginx
+│   └── conf.d/
+│       └── icecast.conf.template      # Reverse proxy config pentru streaming
+├── supervisord/
+│   └── supervisord.conf               # Orchestrare Icecast + Nginx
+├── LICENSE                            # Licență
+└── README.md                          # Documentație
 ```
+
+### Runtime Structure (în container)
+```
+/
+├── etc/
+│   ├── icecast/
+│   │   ├── icecast.xml.template       # Template (copiat la build)
+│   │   └── icecast.xml                # Generated at runtime
+│   ├── nginx/
+│   │   ├── nginx.conf                 # Main config
+│   │   └── conf.d/
+│   │       ├── icecast.conf.template  # Template (copiat la build)
+│   │       └── icecast.conf           # Generated at runtime
+│   └── supervisor/
+│       └── conf.d/
+│           └── supervisord.conf       # Supervisord config
+├── app/
+│   └── entrypoint.sh                  # Entrypoint script
+└── var/
+    └── log/
+        ├── icecast/                   # Icecast logs
+        ├── nginx/                     # Nginx logs
+        └── supervisor/                # Supervisor logs
+```
+
+### Arhitectură Container
+
+```
+┌─────────────────────────────────────┐
+│         Container (Port 80)         │
+│                                     │
+│  ┌─────────────────────────────┐   │
+│  │         Nginx :80           │   │
+│  │  (Reverse Proxy + CORS)     │   │
+│  └──────────┬──────────────────┘   │
+│             │                       │
+│             ▼                       │
+│  ┌─────────────────────────────┐   │
+│  │    Icecast-KH :8000         │   │
+│  │  (Streaming Server)         │   │
+│  └─────────────────────────────┘   │
+│                                     │
+│         Supervised by               │
+│         supervisord                 │
+└─────────────────────────────────────┘
+```
+
+## Best Practices
+
+### Securitate
+
+1. **Nu commit .env în VCS** - folosește `.env.dist` ca template
+2. **Schimbă parolele default** - `SOURCE_PASSWORD`, `ADMIN_PASSWORD`, `RELAY_PASSWORD`
+3. **Limitează accesul admin** - consideră basic auth pe `/admin` în nginx
+
+### Performance
+
+1. **Ajustează limits** pentru trafic:
+   ```env
+   CLIENTS=10000
+   QUEUE_SIZE=2097152
+   BURST_SIZE=131072
+   ```
+
+2. **Monitor logs** pentru bottlenecks:
+   ```bash
+   docker logs -f icecast
+   docker exec icecast tail -f /var/log/icecast/error.log
+   ```
+
+### Configurare
+
+- **Structură standard Linux**: Configurările în `/etc/`, logs în `/var/log/`, conform FHS (Filesystem Hierarchy Standard)
+- Toate variabilele de mediu au **defaults sensibile** în `entrypoint.sh`
+- **Template-urile** (.xml.template, .conf.template) sunt copiate la build și procesate la runtime
+- **Nginx reverse proxy** oferă CORS și optimizări pentru streaming
+- **Config generation**: Entrypoint-ul generează configs din templates cu `envsubst`
 
 ## Troubleshooting
 
 ### Container nu pornește
 
 ```bash
-docker logs icecast2
+docker logs icecast
 ```
 
 ### StreamUrl nu apare

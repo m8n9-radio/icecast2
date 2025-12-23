@@ -1,6 +1,6 @@
-# Upstream pentru Icecast backend
+# Upstream pentru Icecast backend (in same container)
 upstream icecast_backend {
-    server icecast:8000;
+    server 127.0.0.1:8000;
     keepalive 64;
 }
 

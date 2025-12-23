@@ -1,11 +1,12 @@
 #!/bin/bash
 set -e
 
-# Default values
 export TIMEZONE=${TIMEZONE:-UTC}
-export CLIENTS=${CLIENTS:-10000}
-export SOURCES=${SOURCES:-100}
-export QUEUE_SIZE=${QUEUE_SIZE:-524288}
+
+# Limits
+export CLIENTS=${CLIENTS:-5000}
+export SOURCES=${SOURCES:-50}
+export QUEUE_SIZE=${QUEUE_SIZE:-1048576}
 export CLIENT_TIMEOUT=${CLIENT_TIMEOUT:-30}
 export HEADER_TIMEOUT=${HEADER_TIMEOUT:-15}
 export SOURCE_TIMEOUT=${SOURCE_TIMEOUT:-10}
@@ -17,43 +18,35 @@ export RELAY_PASSWORD=${RELAY_PASSWORD:-hackme}
 export ADMIN_USER=${ADMIN_USER:-admin}
 export ADMIN_PASSWORD=${ADMIN_PASSWORD:-hackme}
 
-# Listen socket
+# Listen
 export LISTEN_PORT=${LISTEN_PORT:-8000}
 export LISTEN_IP=${LISTEN_IP:-0.0.0.0}
 
 # Logging
-export LOGLEVEL=${LOGLEVEL:-3}
+export LOGLEVEL=${LOGLEVEL:-1}
 export LOGDIR=${LOGDIR:-/var/log/icecast}
 
 # Server info
-export HOSTNAME=${HOSTNAME:-localhost}
-export LOCATION=${LOCATION:-Unknown}
-export ADMIN_EMAIL=${ADMIN_EMAIL:-admin@localhost}
+export HOSTNAME=${HOSTNAME:-localhoxt}
+export LOCATION=${LOCATION:-Unknown`}
+export ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
 
-# Webroot
 export WEBROOT=${WEBROOT:-/usr/share/icecast2/web}
 export ADMINROOT=${ADMINROOT:-/usr/share/icecast2/admin}
 
-# Mount
 export MOUNT_NAME=${MOUNT_NAME:-/stream}
 
-# Generate Icecast configuration
-envsubst < /app/icecast.xml.template > /app/icecast.xml
-
-# Generate nginx configuration from template
+# Generate configs from templates
+envsubst < /etc/icecast/icecast.xml.template > /etc/icecast/icecast.xml
 envsubst '${MOUNT_NAME}' < /etc/nginx/conf.d/icecast.conf.template > /etc/nginx/conf.d/icecast.conf
 
-# Test nginx configuration
+# Validate nginx config
 nginx -t
 
 echo "========================================"
-echo "Icecast 2.4.4 + Nginx Proxy"
-echo "========================================"
-echo "Icecast Port (internal): $LISTEN_PORT"
-echo "Nginx Port (external): 80"
-echo "Mount: $MOUNT_NAME"
-echo "Stream URL: http://<host>/"
-echo "Admin URL: http://<host>/admin"
+echo "   icecast: 0.0.0.0:$LISTEN_PORT"
+echo "     nginx: 0.0.0.0:80"
+echo " streaming: 0.0.0.0:80$MOUNT_NAME"
 echo "========================================"
 
 exec "$@"
